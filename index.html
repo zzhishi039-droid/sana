@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POSApp - 販売管理レジ</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+  <!-- ログイン未完了画面 -->
+  <div id="login-view" class="flex flex-col items-center justify-center min-h-screen px-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+      <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        🛒
+      </div>
+      <h1 class="text-2xl font-bold mb-2 text-slate-800">POSApp (販売管理レジ)</h1>
+      <p class="text-slate-500 mb-6 text-sm">ご利用いただくにはGoogleアカウントでログインが必要です。</p>
+      <button id="login-btn" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 rounded-xl shadow-sm transition">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Googleでログイン
+      </button>
+    </div>
+  </div>
+
+  <!-- ログイン後メイン画面 -->
+  <div id="app-view" class="hidden min-h-screen pb-12">
+    <!-- ヘッダー -->
+    <header class="bg-indigo-600 text-white shadow-md">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🛒</span>
+          <h1 class="text-xl font-bold">POSApp</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <img id="user-avatar" class="w-8 h-8 rounded-full border-2 border-white" src="" alt="Avatar">
+            <span id="user-name" class="text-sm font-medium hidden sm:inline"></span>
+          </div>
+          <button id="logout-btn" class="bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold py-2 px-3 rounded-lg transition">
+            ログアウト
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- 入力フォーム -->
+      <section class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
+        <h2 id="form-title" class="text-lg font-bold mb-4 text-slate-800 flex items-center gap-2">
+          <span>📝</span> 販売データの登録
+        </h2>
+        
+        <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200 font-medium"></div>
+
+        <form id="sales-form" class="space-y-4">
+          <input type="hidden" id="edit-doc-id" value="">
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">商品名 <span class="text-red-500">*</span></label>
+            <input type="text" id="product-name" required placeholder="例: コーヒー" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">単価 (円) <span class="text-red-500">*</span></label>
+              <input type="number" id="unit-price" required min="0" placeholder="500" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">個数 <span class="text-red-500">*</span></label>
+              <input type="number" id="quantity" required min="1" value="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+            </div>
+          </div>
+
+          <!-- 自動計算表示 -->
+          <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
+            <span class="text-xs font-bold text-indigo-800">合計金額 (自動計算):</span>
+            <span id="calculated-total" class="text-base font-extrabold text-indigo-600">0 円</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">日付 <span class="text-red-500">*</span></label>
+            <input type="date" id="sale-date" required class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">メモ</label>
+            <textarea id="memo" rows="3" placeholder="備考・注意事項など" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm resize-none"></textarea>
+          </div>
+
+          <div class="flex gap-2">
+            <button type="submit" id="submit-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow transition text-sm">
+              登録する
+            </button>
+            <button type="button" id="cancel-edit-btn" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 px-4 rounded-xl transition text-sm">
+              キャンセル
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 一覧 ＆ 集計 -->
+      <section class="lg:col-span-2 space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">総売上合計</span>
+            <div id="grand-total" class="text-2xl font-black text-slate-800 mt-1">0 円</div>
+          </div>
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center">
+            <label class="text-xs font-bold text-slate-500 mb-1">商品名で絞り込み</label>
+            <input type="text" id="search-input" placeholder="絞り込み検索..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- 日付別集計 -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <h3 class="text-xs font-bold text-slate-500 mb-2">📅 日付別売上集計</h3>
+          <div id="date-summary" class="flex flex-wrap gap-2 text-xs">
+            <span class="text-slate-400">データがありません</span>
+          </div>
+        </div>
+
+        <!-- データ一覧 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+              📋 販売履歴一覧 <span id="record-count" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">0件</span>
+            </h3>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                  <th class="p-3">日付</th>
+                  <th class="p-3">商品名</th>
+                  <th class="p-3">単価</th>
+                  <th class="p-3">個数</th>
+                  <th class="p-3">小計</th>
+                  <th class="p-3">メモ</th>
+                  <th class="p-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="sales-list" class="divide-y divide-slate-100 text-slate-700">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Firebase JavaScript SDK (v10 JS Module) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      query, 
+      where, 
+      onSnapshot, 
+      deleteDoc, 
+      doc, 
+      updateDoc, 
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 指定のFirebase設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBVGWkdoSEWtiDGFwDaVxz9tOPaipsboJc",
+      authDomain: "sara-67001.firebaseapp.com",
+      projectId: "sara-67001",
+      storageBucket: "sara-67001.firebasestorage.app",
+      messagingSenderId: "80568981578",
+      appId: "1:80568981578:web:67cce7a8102ab64ac92eb3",
+      measurementId: "G-HXJ4748G32"
+    };
+
+    // Firebase 初期化
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // DOM要素
+    const loginView = document.getElementById('login-view');
+    const appView = document.getElementById('app-view');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userNameSpan = document.getElementById('user-name');
+    const userAvatarImg = document.getElementById('user-avatar');
+
+    const salesForm = document.getElementById('sales-form');
+    const editDocIdInput = document.getElementById('edit-doc-id');
+    const productNameInput = document.getElementById('product-name');
+    const unitPriceInput = document.getElementById('unit-price');
+    const quantityInput = document.getElementById('quantity');
+    const calculatedTotalSpan = document.getElementById('calculated-total');
+    const saleDateInput = document.getElementById('sale-date');
+    const memoInput = document.getElementById('memo');
+    const submitBtn = document.getElementById('submit-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const formTitle = document.getElementById('form-title');
+    const errorMsg = document.getElementById('error-msg');
+
+    const salesList = document.getElementById('sales-list');
+    const grandTotalDiv = document.getElementById('grand-total');
+    const dateSummaryDiv = document.getElementById('date-summary');
+    const recordCountSpan = document.getElementById('record-count');
+    const searchInput = document.getElementById('search-input');
+
+    let currentUser = null;
+    let rawDocsData = [];
+    let unsubscribeSnapshot = null;
+
+    // 本日の日付をデフォルト設定 (YYYY-MM-DD)
+    const setTodayDate = () => {
+      const today = new Date().toISOString().split('T')[0];
+      saleDateInput.value = today;
+    };
+    setTodayDate();
+
+    // 合計金額自動計算
+    const updateCalculatedTotal = () => {
+      const price = Number(unitPriceInput.value) || 0;
+      const qty = Number(quantityInput.value) || 0;
+      const total = price * qty;
+      calculatedTotalSpan.textContent = `${total.toLocaleString()} 円`;
+      return total;
+    };
+
+    unitPriceInput.addEventListener('input', updateCalculatedTotal);
+    quantityInput.addEventListener('input', updateCalculatedTotal);
+
+    // Google ログイン処理
+    loginBtn.addEventListener('click', async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        alert("ログインに失敗しました: " + err.message);
+      }
+    });
+
+    // ログアウト処理
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        alert("ログアウトに失敗しました: " + err.message);
+      }
+    });
+
+    // 認証状態の監視
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) {
+        loginView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        userNameSpan.textContent = user.displayName || 'ユーザー';
+        userAvatarImg.src = user.photoURL || 'https://via.placeholder.com/40';
+        listenToSalesData(user.uid);
+      } else {
+        loginView.classList.remove('hidden');
+        appView.classList.add('hidden');
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+        rawDocsData = [];
+      }
+    });
+
+    // Firestoreからログインユーザーのデータをリアルタイム取得
+    const listenToSalesData = (uid) => {
+      const q = query(
+        collection(db, "sales"),
+        where("uid", "==", uid)
+      );
+
+      unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        rawDocsData = snapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        }));
+
+        // 日付降順・タイムスタンプ順でソート
+        rawDocsData.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+        renderData();
+      }, (error) => {
+        showError("データ読み込みエラー: " + error.message);
+      });
+    };
+
+    // 一覧画面・集計の描画
+    const renderData = () => {
+      const filterText = searchInput.value.trim().toLowerCase();
+      const filtered = rawDocsData.filter(item => 
+        (item.productName || '').toLowerCase().includes(filterText)
+      );
+
+      salesList.innerHTML = '';
+      let totalAmount = 0;
+      const dateMap = {};
+
+      if (filtered.length === 0) {
+        salesList.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">データがありません</td></tr>`;
+      } else {
+        filtered.forEach(item => {
+          const subtotal = (item.unitPrice || 0) * (item.quantity || 0);
+          totalAmount += subtotal;
+
+          // 日付別集計計算
+          if (item.date) {
+            dateMap[item.date] = (dateMap[item.date] || 0) + subtotal;
+          }
+
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 border-b border-slate-100 transition";
+          tr.innerHTML = `
+            <td class="p-3 font-medium text-slate-600 whitespace-nowrap">${escapeHtml(item.date || '')}</td>
+            <td class="p-3 font-semibold text-slate-800">${escapeHtml(item.productName || '')}</td>
+            <td class="p-3 font-mono">${Number(item.unitPrice || 0).toLocaleString()}円</td>
+            <td class="p-3 font-mono">${Number(item.quantity || 0)}</td>
+            <td class="p-3 font-bold text-indigo-600 font-mono">${subtotal.toLocaleString()}円</td>
+            <td class="p-3 text-slate-500 max-w-xs truncate" title="${escapeHtml(item.memo || '')}">${escapeHtml(item.memo || '-')}</td>
+            <td class="p-3 text-right whitespace-nowrap">
+              <button data-id="${item.id}" class="edit-btn text-indigo-600 hover:text-indigo-800 font-semibold mr-2">編集</button>
+              <button data-id="${item.id}" class="delete-btn text-red-500 hover:text-red-700 font-semibold">削除</button>
+            </td>
+          `;
+          salesList.appendChild(tr);
+        });
+      }
+
+      // 集計値の更新
+      grandTotalDiv.textContent = `${totalAmount.toLocaleString()} 円`;
+      recordCountSpan.textContent = `${filtered.length}件`;
+
+      // 日付別集計バッジ描画
+      dateSummaryDiv.innerHTML = '';
+      const dates = Object.keys(dateMap).sort().reverse();
+      if (dates.length === 0) {
+        dateSummaryDiv.innerHTML = `<span class="text-slate-400">集計データがありません</span>`;
+      } else {
+        dates.forEach(d => {
+          const badge = document.createElement('div');
+          badge.className = "bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-medium";
+          badge.innerHTML = `<span class="font-bold">${d}</span>: <span class="text-indigo-600 font-bold">${dateMap[d].toLocaleString()}円</span>`;
+          dateSummaryDiv.appendChild(badge);
+        });
+      }
+
+      // 編集・削除ボタンへのイベント付与
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => handleDelete(e.target.dataset.id));
+      });
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => handleEdit(e.target.dataset.id));
+      });
+    };
+
+    searchInput.addEventListener('input', renderData);
+
+    // エラーメッセージ表示ヘルパー
+    const showError = (msg) => {
+      errorMsg.textContent = msg;
+      errorMsg.classList.remove('hidden');
+    };
+
+    const clearError = () => {
+      errorMsg.textContent = '';
+      errorMsg.classList.add('hidden');
+    };
+
+    // フォーム送信（新規登録 / 更新）
+    salesForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      if (!currentUser) {
+        showError("ログインしていないため登録できません。");
+        return;
+      }
+
+      const productName = productNameInput.value.trim();
+      const unitPrice = Number(unitPriceInput.value);
+      const quantity = Number(quantityInput.value);
+      const date = saleDateInput.value;
+      const memo = memoInput.value.trim();
+
+      // バリデーション
+      if (!productName) {
+        showError("商品名を入力してください。");
+        return;
+      }
+      if (isNaN(unitPrice) || unitPrice < 0) {
+        showError("単価には0以上の数値を入力してください。");
+        return;
+      }
+      if (isNaN(quantity) || quantity < 1) {
+        showError("個数には1以上の数値を入力してください。");
+        return;
+      }
+      if (!date) {
+        showError("日付を選択してください。");
+        return;
+      }
+
+      const payload = {
+        uid: currentUser.uid,
+        productName,
+        unitPrice,
+        quantity,
+        totalPrice: unitPrice * quantity,
+        date,
+        memo,
+        updatedAt: serverTimestamp()
+      };
+
+      const docId = editDocIdInput.value;
+
+      try {
+        if (docId) {
+          // 既存更新
+          await updateDoc(doc(db, "sales", docId), payload);
+        } else {
+          // 新規登録
+          payload.createdAt = serverTimestamp();
+          await addDoc(collection(db, "sales"), payload);
+        }
+
+        resetForm();
+      } catch (err) {
+        showError("データの保存に失敗しました: " + err.message);
+      }
+    });
+
+    // 編集モーダル・フォーム切り替え
+    const handleEdit = (id) => {
+      const target = rawDocsData.find(d => d.id === id);
+      if (!target) return;
+
+      editDocIdInput.value = target.id;
+      productNameInput.value = target.productName || '';
+      unitPriceInput.value = target.unitPrice || 0;
+      quantityInput.value = target.quantity || 1;
+      saleDateInput.value = target.date || '';
+      memoInput.value = target.memo || '';
+
+      updateCalculatedTotal();
+
+      formTitle.innerHTML = '✏️ 販売データの編集';
+      submitBtn.textContent = '更新する';
+      cancelEditBtn.classList.remove('hidden');
+      clearError();
+    };
+
+    // 編集キャンセル
+    cancelEditBtn.addEventListener('click', () => {
+      resetForm();
+    });
+
+    const resetForm = () => {
+      salesForm.reset();
+      editDocIdInput.value = '';
+      setTodayDate();
+      updateCalculatedTotal();
+      formTitle.innerHTML = '📝 販売データの登録';
+      submitBtn.textContent = '登録する';
+      cancelEditBtn.classList.add('hidden');
+      clearError();
+    };
+
+    // 削除処理
+    const handleDelete = async (id) => {
+      if (!confirm("このレコードを削除しますか？")) return;
+      try {
+        await deleteDoc(doc(db, "sales", id));
+      } catch (err) {
+        alert("削除に失敗しました: " + err.message);
+      }
+    };
+
+    // HTMLエスケープ（XSS対策）
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
